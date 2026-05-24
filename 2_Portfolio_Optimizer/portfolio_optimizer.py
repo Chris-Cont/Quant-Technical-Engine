@@ -318,3 +318,44 @@ class PortfolioQuantEngine:
             
         self.df_quadrants = pd.DataFrame(plot_data)                
                 
+    def calculate_pro_dashboard_indicators(self, ticker='SPY'):
+        """
+        STRATEGY K: Pro Trading Dashboard (Momentum & Trend).
+        Calculates SMA (20,50,200), RSI (14), Stochastic (14,3,3), and MACD (12,26,9)
+        to evaluate the macro trend and micro momentum of a specific asset.
+        """
+        # Fetch 2 years of data to properly calculate the 200-day SMA
+        df = yf.download(ticker, period="2y", progress=False)
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+        df = df[['Open', 'High', 'Low', 'Close', 'Volume']].dropna()
+
+        # 1. Moving Averages (Trend)
+        df['SMA_20'] = df['Close'].rolling(window=20).mean()
+        df['SMA_50'] = df['Close'].rolling(window=50).mean()
+        df['SMA_200'] = df['Close'].rolling(window=200).mean()
+
+        # 2. RSI 14 (Momentum)
+        delta = df['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        df['RSI_14'] = 100 - (100 / (1 + rs))
+
+        # 3. Stochastic 14,3,3 (Reversion)
+        low_min = df['Low'].rolling(window=14).min()
+        high_max = df['High'].rolling(window=14).max()
+        df['Stoch_K_raw'] = 100 * ((df['Close'] - low_min) / (high_max - low_min))
+        df['Stoch_K'] = df['Stoch_K_raw'].rolling(window=3).mean()
+        df['Stoch_D'] = df['Stoch_K'].rolling(window=3).mean()
+
+        # 4. MACD 12,26,9 (Trend/Momentum Crossover)
+        ema_12 = df['Close'].ewm(span=12, adjust=False).mean()
+        ema_26 = df['Close'].ewm(span=26, adjust=False).mean()
+        df['MACD'] = ema_12 - ema_26
+        df['Signal_Line'] = df['MACD'].ewm(span=9, adjust=False).mean()
+        df['MACD_Hist'] = df['MACD'] - df['Signal_Line']
+
+        # Save the last 252 trading days (1 year) for the visualizer
+        self.pro_dash_data = df.iloc[-252:].copy()
+        self.pro_dash_ticker = ticker
