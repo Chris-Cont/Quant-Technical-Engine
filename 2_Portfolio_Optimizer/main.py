@@ -127,6 +127,15 @@ if __name__ == "__main__":
         if amount > 1.00:
             print(f" > {ticker:<4}: ${amount:.2f}")
     print("=" * 65)
+
+    # 8.5 STRATEGY E: VIX-ADJUSTED RETURNS PROOF
+    print("\n" + "="*65)
+    print(" ⚖️ STRATEGY E: THE VOLATILITY PENALTY ON THE UNHEDGED PORTFOLIO")
+    print("="*65)
+    print(f"Risk Statistics (Base Tech Portfolio):")
+    print(f" > Actual Volatility (Black Line)       : {engine.real_vol_old:.2%}")
+    print(f" > VIX-Adjusted Volatility (Red Line)   : {engine.adj_vol_old:.2%}")
+    print("-" * 65)
     
     # 9. RENDER VISUALS (ALWAYS AT THE END)
     print("\n🎨 Triggering Rendering Engine for Plots...")
