@@ -551,3 +551,75 @@ class PortfolioQuantEngine:
                 
             except Exception:
                 self.screener_failed.append(ticker)
+    def run_holistic_screener(self):
+        """
+        STRATEGY N: Holistic Technical Screener & Action Matrix.
+        Scans all assets, applies RSI, Stochastic, and MACD logic, 
+        and assigns a definitive action (BUY/HOLD/SELL) based on confluence.
+        """
+        print("📟 Initializing Action Matrix Screener...")
+        scan_data = yf.download(self.all_tickers, period="6mo", progress=False)
+
+        if isinstance(scan_data.columns, pd.MultiIndex):
+            close_data, high_data, low_data = scan_data['Close'], scan_data['High'], scan_data['Low']
+        else:
+            close_data = pd.DataFrame({self.all_tickers[0]: scan_data['Close']})
+            high_data = pd.DataFrame({self.all_tickers[0]: scan_data['High']})
+            low_data = pd.DataFrame({self.all_tickers[0]: scan_data['Low']})
+
+        self.screener_results = []
+        self.screener_failed = []
+
+        for ticker in self.all_tickers:
+            try:
+                df = pd.DataFrame({'Close': close_data[ticker], 'High': high_data[ticker], 'Low': low_data[ticker]}).dropna()
+                if len(df) < 50: 
+                    self.screener_failed.append(ticker)
+                    continue
+                
+                # 1. RSI (14)
+                delta = df['Close'].diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                rs = gain / loss
+                df['RSI'] = 100 - (100 / (1 + rs))
+                
+                # 2. Stochastic (14, 3, 3)
+                low_min = df['Low'].rolling(window=14).min()
+                high_max = df['High'].rolling(window=14).max()
+                df['Stoch_K_raw'] = 100 * ((df['Close'] - low_min) / (high_max - low_min))
+                df['Stoch_K'] = df['Stoch_K_raw'].rolling(window=3).mean()
+                df['Stoch_D'] = df['Stoch_K'].rolling(window=3).mean()
+                
+                # 3. MACD
+                ema_12 = df['Close'].ewm(span=12, adjust=False).mean()
+                ema_26 = df['Close'].ewm(span=26, adjust=False).mean()
+                df['MACD'] = ema_12 - ema_26
+                df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+                df['MACD_Hist'] = df['MACD'] - df['Signal']
+                
+                last = df.iloc[-1]
+                prev = df.iloc[-2]
+                
+                p = last['Close']
+                rsi = last['RSI']
+                stoch = last['Stoch_K']
+                macd_trend = "Bullish" if last['MACD_Hist'] > 0 else "Bearish"
+                macd_mom = "Expanding" if last['MACD_Hist'] > prev['MACD_Hist'] else "Contracting"
+                
+                # Action Matrix AI Logic
+                action = "HOLD 🟡"
+                
+                if rsi < 35 and stoch < 25 and last['MACD_Hist'] > prev['MACD_Hist']:
+                    action = "STRONG BUY 🟢"
+                elif rsi < 45 and last['MACD_Hist'] > prev['MACD_Hist']:
+                    action = "BUY 📈"
+                elif rsi > 75 and stoch > 80 and last['MACD_Hist'] < prev['MACD_Hist']:
+                    action = "STRONG SELL 🔴"
+                elif rsi > 65 and last['MACD_Hist'] < 0:
+                    action = "SELL 📉"
+                    
+                self.screener_results.append((ticker, p, rsi, stoch, f"{macd_trend} ({macd_mom})", action))
+                
+            except Exception:
+                self.screener_failed.append(ticker)
