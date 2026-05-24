@@ -1,0 +1,168 @@
+import yfinance as yf
+import numpy as np
+import pandas as pd
+from scipy.optimize import minimize
+import config
+import warnings
+warnings.filterwarnings('ignore')
+
+class PortfolioQuantEngine:
+    def __init__(self):
+        self.old_investments = config.old_investments
+        self.stock_hedge_tickers = config.stock_hedge_tickers
+        self.macro_hedge_tickers = config.macro_hedge_tickers
+        
+        self.all_tickers = list(self.old_investments.keys()) + self.stock_hedge_tickers + self.macro_hedge_tickers
+        self.tickers_with_vix = self.all_tickers + ['^VIX']
+        
+        self.old_amounts = np.array(list(self.old_investments.values()))
+        self.total_budget = np.sum(self.old_amounts) + config.stock_budget + config.macro_budget
+        
+        self.num_stock = len(self.stock_hedge_tickers)
+        self.num_macro = len(self.macro_hedge_tickers)
+        self.total_new = self.num_stock + self.num_macro
+
+    def fetch_data_and_filter(self):
+        print("Λήψη δεδομένων αγοράς (Ιστορικό 6 ετών για Backtest & Stress Test)...")
+        data = yf.download(self.tickers_with_vix, period="6y", progress=False)['Close'].dropna()
+
+        stock_data = data[self.all_tickers]
+        vix_data = data['^VIX']
+
+        self.all_returns = np.log(stock_data / stock_data.shift(1)).dropna()
+        aligned_vix = vix_data.loc[self.all_returns.index]
+        self.filtered_returns = self.all_returns[aligned_vix < config.VIX_THRESHOLD]
+
+        self.cov_matrix = self.filtered_returns.cov() * 252 
+        self.annual_returns = self.filtered_returns.mean() * 252
+
+        old_weights = self.old_amounts / np.sum(self.old_amounts)
+        old_cov_matrix = self.filtered_returns[list(self.old_investments.keys())].cov() * 252
+        self.risk_before = np.sqrt(np.dot(old_weights.T, np.dot(old_cov_matrix, old_weights)))
+        self.return_before = np.sum(self.annual_returns[list(self.old_investments.keys())] * old_weights)
+
+    def _get_portfolio_metrics(self, new_amounts):
+        combined_amounts = np.concatenate((self.old_amounts, new_amounts))
+        weights = combined_amounts / self.total_budget
+        ret = np.sum(self.annual_returns * weights)
+        var = np.dot(weights.T, np.dot(self.cov_matrix, weights))
+        vol = np.sqrt(var)
+        sharpe = (ret - config.risk_free_rate) / vol
+        return ret, vol, sharpe
+
+    def run_optimization(self):
+        print("Εκτέλεση Βελτιστοποίησης (Max Sharpe)...")
+        def objective_min_vol(new_amounts): return self._get_portfolio_metrics(new_amounts)[1] * 1000
+        def objective_max_sharpe(new_amounts): return -self._get_portfolio_metrics(new_amounts)[2]
+
+        constraints = (
+            {'type': 'eq', 'fun': lambda x: np.sum(x[:self.num_stock]) - config.stock_budget},
+            {'type': 'eq', 'fun': lambda x: np.sum(x[self.num_stock:]) - config.macro_budget}
+        )
+        bounds = tuple((0, max(config.stock_budget, config.macro_budget)) for _ in range(self.total_new))
+        initial_guess = np.array([config.stock_budget / self.num_stock] * self.num_stock + 
+                                 [config.macro_budget / self.num_macro] * self.num_macro)
+
+        opt_max_sharpe = minimize(objective_max_sharpe, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints)
+        self.opt_amounts = opt_max_sharpe.x
+        self.return_after, self.risk_after, self.sharpe_after = self._get_portfolio_metrics(self.opt_amounts)
+        self.final_weights = np.concatenate((self.old_amounts, self.opt_amounts)) / self.total_budget
+
+        # Monte Carlo Efficient Frontier
+        print("Δημιουργία 15000 προσομοιώσεων και Αποτελεσματικού Συνόρου...")
+        num_portfolios = 15000
+        self.results = np.zeros((3, num_portfolios))
+
+        for i in range(num_portfolios):
+            w_s = np.random.random(self.num_stock); w_s = (w_s / np.sum(w_s)) * config.stock_budget
+            w_m = np.random.random(self.num_macro); w_m = (w_m / np.sum(w_m)) * config.macro_budget
+            rand_amts = np.concatenate((w_s, w_m))
+            r, v, s = self._get_portfolio_metrics(rand_amts)
+            self.results[0, i] = v; self.results[1, i] = r; self.results[2, i] = s
+
+        target_returns = np.linspace(self.results[1,:].min(), self.results[1,:].max(), 30)
+        self.frontier_vols = []; self.valid_returns = []
+
+        for target in target_returns:
+            cons = (
+                {'type': 'eq', 'fun': lambda x: np.sum(x[:self.num_stock]) - config.stock_budget},
+                {'type': 'eq', 'fun': lambda x: np.sum(x[self.num_stock:]) - config.macro_budget},
+                {'type': 'eq', 'fun': lambda x: self._get_portfolio_metrics(x)[0] - target}
+            )
+            res = minimize(objective_min_vol, initial_guess, method='SLSQP', bounds=bounds, constraints=cons)
+            if res.success:
+                self.frontier_vols.append(self._get_portfolio_metrics(res.x)[1])
+                self.valid_returns.append(target)
+
+    def run_backtests_and_stress(self):
+        print("Εκτέλεση Backtesting έναντι του SPY...")
+        self.spy_data = yf.download('SPY', period="6y", progress=False)['Close'].dropna().squeeze()
+        self.common_dates = self.all_returns.index.intersection(self.spy_data.index)
+
+        recent_dates = self.common_dates[-252:]
+        self.port_daily_1y = self.all_returns.loc[recent_dates].dot(self.final_weights)
+        self.spy_daily_1y = np.log(self.spy_data.loc[recent_dates] / self.spy_data.shift(1).loc[recent_dates]).dropna()
+
+        self.port_cum_1y = np.exp(self.port_daily_1y.cumsum()) - 1
+        self.spy_cum_1y = np.exp(self.spy_daily_1y.cumsum()) - 1
+
+        def max_drawdown(ret_series):
+            comp = (ret_series + 1).cumprod()
+            return float(((comp / comp.expanding(min_periods=1).max()) - 1).min())
+
+        self.port_mdd_1y = max_drawdown(self.port_daily_1y)
+        self.spy_mdd_1y = max_drawdown(self.spy_daily_1y)
+
+        self.port_final_return = float(self.port_cum_1y.iloc[-1])
+        self.spy_final_return = float(self.spy_cum_1y.iloc[-1])
+        self.port_final_value = self.total_budget * (1 + self.port_final_return)
+        self.spy_final_value = self.total_budget * (1 + self.spy_final_return)
+        
+        # 6. HISTORICAL STRESS TESTING (ΑΚΡΑΙΑ ΣΕΝΑΡΙΑ)
+        self.port_all_daily = self.all_returns.loc[self.common_dates].dot(self.final_weights)
+        self.spy_all_daily = np.log(self.spy_data.loc[self.common_dates] / self.spy_data.shift(1).loc[self.common_dates]).dropna()
+        self.mdd_func = max_drawdown # Save for main.py to use
+
+    def run_forward_monte_carlo(self):
+        sim_days = config.sim_years * 252
+        mu = self.return_after
+        sigma = self.risk_after
+
+        daily_mu = (mu - 0.5 * sigma**2) / 252
+        daily_sigma = sigma / np.sqrt(252)
+
+        print(f"Ρίχνουμε τα ζάρια για {config.num_sims} μελλοντικά σενάρια αγοράς...")
+        Z = np.random.normal(0, 1, (sim_days, config.num_sims))
+        daily_sim_returns = daily_mu + daily_sigma * Z
+
+        self.price_paths = np.zeros((sim_days + 1, config.num_sims))
+        self.price_paths[0] = self.total_budget
+
+        for t in range(1, sim_days + 1):
+            self.price_paths[t] = self.price_paths[t-1] * np.exp(daily_sim_returns[t-1])
+
+        self.final_sim_values = self.price_paths[-1]
+
+    def prepare_risk_and_correlation(self):
+        # Correlation Matrices Prep
+        self.old_tickers = list(self.old_investments.keys())
+        self.old_corr = self.filtered_returns[self.old_tickers].corr()
+
+        self.bought_new_tickers = [t for i, t in enumerate(self.stock_hedge_tickers + self.macro_hedge_tickers) if self.opt_amounts[i] > 1.00]
+        self.final_portfolio_tickers = self.old_tickers + self.bought_new_tickers
+        self.new_corr = self.filtered_returns[self.final_portfolio_tickers].corr()
+
+        # Risk Contribution Prep
+        self.final_cov_matrix = self.filtered_returns[self.final_portfolio_tickers].cov() * 252
+        final_weights_filtered = []
+        for ticker in self.final_portfolio_tickers:
+            if ticker in self.old_investments:
+                final_weights_filtered.append(self.old_investments[ticker] / self.total_budget)
+            else:
+                idx = (self.stock_hedge_tickers + self.macro_hedge_tickers).index(ticker)
+                final_weights_filtered.append(self.opt_amounts[idx] / self.total_budget)
+
+        self.final_weights_filtered = np.array(final_weights_filtered)
+        portfolio_vol = np.sqrt(np.dot(self.final_weights_filtered.T, np.dot(self.final_cov_matrix, self.final_weights_filtered)))
+        marginal_contrib = np.dot(self.final_cov_matrix, self.final_weights_filtered) / portfolio_vol
+        self.risk_contribution_pct = (self.final_weights_filtered * marginal_contrib) / portfolio_vol
