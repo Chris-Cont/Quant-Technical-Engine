@@ -20,6 +20,7 @@ if __name__ == "__main__":
     engine.run_monte_carlo_comparison() 
      # TECHNICAL ANALYSIS
     engine.calculate_technical_indicators(ticker='SPY') # <-- you can type ticker you want
+    engine.calculate_pro_dashboard_indicators(ticker='SPY') # <-- you can type ticker you want
     
     # STRATEGY EXTENSIONS
     engine.analyze_vix_sharpe()
