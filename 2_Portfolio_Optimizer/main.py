@@ -239,7 +239,7 @@ if __name__ == "__main__":
         print("="*75)
 
 
-            # 9.9 STRATEGY N: HOLISTIC SCREENER & ACTION MATRIX
+    # 9.9 STRATEGY N: HOLISTIC SCREENER & ACTION MATRIX
     print("\n" + "="*85)
     print(" 📟 STRATEGY N: ACTION MATRIX (RSI + MACD + STOCHASTIC)")
     print("="*85)
