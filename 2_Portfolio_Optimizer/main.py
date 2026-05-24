@@ -181,6 +181,13 @@ if __name__ == "__main__":
     for t, p, s20, s50 in engine.consolidation:
         print(f" > {t:<6} | Price: ${p:>7.2f} | SMA20: ${s20:>7.2f} | SMA50: ${s50:>7.2f}")
     print("="*75)
+
+        # 9.5 STRATEGY J: MARKET CYCLE QUADRANTS
+    print("\n" + "="*75)
+    print(" 📊 STRATEGY J: MARKET CYCLE QUADRANTS SCATTER ANALYSIS")
+    print("="*75)
+    print("Quadrant coordinate matrix computed. Generating visual representation...")
+    print("-" * 75)
     
     # 9. RENDER VISUALS (ALWAYS AT THE END)
     print("\n🎨 Triggering Rendering Engine for Plots...")
