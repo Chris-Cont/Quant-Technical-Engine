@@ -344,3 +344,34 @@ class PortfolioQuantEngine:
         # Note: This relies on calculate_vix_adjusted_returns() having run first
         self.real_rolling_vol = self.old_port_returns.rolling(window).std() * np.sqrt(252) * 100
         self.adj_rolling_vol = self.adj_old_returns.rolling(window).std() * np.sqrt(252) * 100
+
+    def run_monte_carlo_comparison(self):
+        """
+        STRATEGY G: Monte Carlo Comparison (Actual vs VIX-Adjusted).
+        Simulates two portfolios starting from a $10k base to demonstrate 
+        how VIX-adjustment narrows the uncertainty cone of future outcomes.
+        """
+        days_left = 210
+        sims = 1000
+        start_value = 10000 
+        
+        # Calculate drift and volatility
+        mu_real = self.old_port_returns.mean()
+        sigma_real = self.old_port_returns.std()
+        mu_adj = self.adj_old_returns.mean()
+        sigma_adj = self.adj_old_returns.std()
+        
+        self.real_paths = np.zeros((days_left + 1, sims))
+        self.adj_paths = np.zeros((days_left + 1, sims))
+        self.real_paths[0] = start_value
+        self.adj_paths[0] = start_value
+        
+        for t in range(1, days_left + 1):
+            # Using same random seed logic for 'fair' comparison
+            Z = np.random.normal(0, 1, sims)
+            self.real_paths[t] = self.real_paths[t-1] * np.exp(mu_real + sigma_real * Z)
+            self.adj_paths[t] = self.adj_paths[t-1] * np.exp(mu_adj + sigma_adj * Z)
+            
+        self.real_percentiles = np.percentile(self.real_paths, [90, 50, 10], axis=1)
+        self.adj_percentiles = np.percentile(self.adj_paths, [90, 50, 10], axis=1)
+        self.future_dates = pd.date_range(start=self.old_port_returns.index[-1], periods=days_left + 1, freq='B')
