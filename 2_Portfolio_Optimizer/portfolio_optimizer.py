@@ -307,7 +307,8 @@ class PortfolioQuantEngine:
                     self.consolidation.append((ticker, last_price, sma_20, sma_50))
             except:
                 continue
-                        # --- COMPUTE DISTANCES FOR QUADRANT PLOT ---
+                
+        # --- COMPUTE DISTANCES FOR QUADRANT PLOT (TΩΡΑ ΕΙΝΑΙ ΣΩΣΤΑ ΣΤΟΙΧΙΣΜΕΝΟ) ---
         all_scanned_assets = self.bullish + self.bearish + self.consolidation
         plot_data = []
         for t, p, s20, s50 in all_scanned_assets:
@@ -315,6 +316,5 @@ class PortfolioQuantEngine:
             dist_50 = ((p / s50) - 1) * 100 
             plot_data.append({'Ticker': t, 'Dist_SMA50': dist_50, 'Dist_SMA20': dist_20})
             
-        self.df_quadrants = pd.DataFrame(plot_data)
-                
+        self.df_quadrants = pd.DataFrame(plot_data)                
                 
