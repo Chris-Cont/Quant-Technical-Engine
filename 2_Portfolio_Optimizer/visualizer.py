@@ -296,3 +296,47 @@ def generate_plots(engine):
 
         plt.tight_layout()
         plt.show()
+        
+    # -- STRATEGY K: PRO TRADING DASHBOARD --
+    if hasattr(engine, 'pro_dash_data') and not engine.pro_dash_data.empty:
+        df_plot = engine.pro_dash_data
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(16, 18), sharex=True, gridspec_kw={'height_ratios': [3, 1, 1, 1.5]})
+        fig.suptitle(f'Institutional Technical Analysis: {engine.pro_dash_ticker} (Trend & Momentum)', fontsize=18, fontweight='bold', y=0.92)
+
+        # Panel 1: Price & MAs
+        ax1.plot(df_plot.index, df_plot['Close'], color='black', linewidth=1.5, label='Close Price')
+        ax1.plot(df_plot.index, df_plot['SMA_20'], color='#3498db', linewidth=2, label='SMA 20 (Short-Term)')
+        ax1.plot(df_plot.index, df_plot['SMA_50'], color='#e67e22', linewidth=2, label='SMA 50 (Medium-Term)')
+        ax1.plot(df_plot.index, df_plot['SMA_200'], color='#e74c3c', linewidth=2.5, label='SMA 200 (Macro Trend)')
+        ax1.set_title('1. Price Action & Moving Averages', fontsize=12, loc='left', fontweight='bold')
+        ax1.set_ylabel('Price (USD)'); ax1.legend(loc='upper left'); ax1.grid(True, linestyle='--', alpha=0.5)
+
+        # Panel 2: RSI
+        ax2.plot(df_plot.index, df_plot['RSI_14'], color='#8e44ad', linewidth=2, label='RSI (14)')
+        ax2.axhline(70, color='red', linestyle='--', alpha=0.5)
+        ax2.axhline(30, color='green', linestyle='--', alpha=0.5)
+        ax2.fill_between(df_plot.index, 70, 100, color='red', alpha=0.1)
+        ax2.fill_between(df_plot.index, 0, 30, color='green', alpha=0.1)
+        ax2.set_title('2. Relative Strength Index (Overbought > 70 | Oversold < 30)', fontsize=12, loc='left', fontweight='bold')
+        ax2.set_ylabel('RSI'); ax2.set_ylim(0, 100); ax2.grid(True, linestyle='--', alpha=0.5)
+
+        # Panel 3: Stochastic
+        ax3.plot(df_plot.index, df_plot['Stoch_K'], color='#2980b9', linewidth=2, label='%K (Fast)')
+        ax3.plot(df_plot.index, df_plot['Stoch_D'], color='#e74c3c', linewidth=2, linestyle='--', label='%D (Slow)')
+        ax3.axhline(80, color='red', linestyle='--', alpha=0.5)
+        ax3.axhline(20, color='green', linestyle='--', alpha=0.5)
+        ax3.fill_between(df_plot.index, 80, 100, color='red', alpha=0.1)
+        ax3.fill_between(df_plot.index, 0, 20, color='green', alpha=0.1)
+        ax3.set_title('3. Stochastic Oscillator (Watch Extreme Crossovers)', fontsize=12, loc='left', fontweight='bold')
+        ax3.set_ylabel('Stoch'); ax3.set_ylim(0, 100); ax3.legend(loc='upper left'); ax3.grid(True, linestyle='--', alpha=0.5)
+
+        # Panel 4: MACD
+        colors = ['#2ecc71' if val >= 0 else '#e74c3c' for val in df_plot['MACD_Hist']]
+        ax4.bar(df_plot.index, df_plot['MACD_Hist'], color=colors, alpha=0.5, label='MACD Histogram')
+        ax4.plot(df_plot.index, df_plot['MACD'], color='black', linewidth=2, label='MACD Line (12, 26)')
+        ax4.plot(df_plot.index, df_plot['Signal_Line'], color='blue', linewidth=2, linestyle='--', label='Signal Line (9)')
+        ax4.set_title('4. MACD (Momentum Crossovers & Divergence)', fontsize=12, loc='left', fontweight='bold')
+        ax4.set_ylabel('MACD'); ax4.set_xlabel('Date'); ax4.legend(loc='upper left'); ax4.grid(True, linestyle='--', alpha=0.5)
+
+        plt.tight_layout()
+        plt.show()
