@@ -21,7 +21,8 @@ if __name__ == "__main__":
      # TECHNICAL ANALYSIS
     engine.calculate_technical_indicators(ticker='SPY') # <-- you can type ticker you want
     engine.calculate_pro_dashboard_indicators(ticker='SPY') # <-- you can type ticker you want
-    engine.run_sniper_scanner() 
+    engine.run_sniper_scanner()
+    engine.run_macro_monte_carlo(ticker='SPY', sim_years=5) 
     
     # STRATEGY EXTENSIONS
     engine.analyze_vix_sharpe()
@@ -217,6 +218,22 @@ if __name__ == "__main__":
     for t, msg, p, rsi in engine.sniper_watch_list:
         print(f" 👀 {t:<5} | Price: ${p:>7.2f} | RSI: {rsi:>5.1f} | Status: {msg}")
     print("="*75)
+
+    # 9.8 STRATEGY M: 5-YEAR MACRO MONTE CARLO
+    if hasattr(engine, 'macro_ticker'):
+        print("\n" + "="*75)
+        print(f" 🌍 STRATEGY M: 5-YEAR MACRO PROJECTION FOR {engine.macro_ticker}")
+        print("="*75)
+        print(f"Starting Price (Today) : ${engine.macro_last_price:.2f}")
+        
+        median_ret = ((engine.macro_median_path[-1] / engine.macro_last_price) - 1) * 100
+        best_ret = ((engine.macro_best_path[-1] / engine.macro_last_price) - 1) * 100
+        worst_ret = ((engine.macro_worst_path[-1] / engine.macro_last_price) - 1) * 100
+        
+        print(f"Median Target          : ${engine.macro_median_path[-1]:>7.2f} (Return: {median_ret:>6.1f}%)")
+        print(f"Bull Case (Top 10%)    : ${engine.macro_best_path[-1]:>7.2f} (Return: {best_ret:>6.1f}%)")
+        print(f"Bear Case (Bottom 10%) : ${engine.macro_worst_path[-1]:>7.2f} (Return: {worst_ret:>6.1f}%)")
+        print("="*75)
     
     # 10. RENDER VISUALS (ALWAYS AT THE END)
     print("\n🎨 Triggering Rendering Engine for Plots...")
