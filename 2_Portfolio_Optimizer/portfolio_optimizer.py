@@ -253,3 +253,48 @@ class PortfolioQuantEngine:
             self.median_path = np.percentile(self.gld_paths, 50, axis=1)
             self.worst_path = np.percentile(self.gld_paths, 10, axis=1)
             self.future_gld_dates = pd.date_range(start=self.gld_hist_dates[-1], periods=self.days_left_2026 + 1, freq='B')
+
+
+
+
+    def calculate_hedge_correlations(self):
+        """
+        STRATEGY C: Hedging Correlation Analytics.
+        Measures how each candidate hedge asset correlates against the 
+        Base Portfolio to identify the absolute best defensive assets.
+        """
+        # Re-calculate Base Portfolio returns using old weights
+        old_w = self.old_amounts / np.sum(self.old_amounts)
+        old_portfolio_returns = self.filtered_returns[self.old_tickers].dot(old_w)
+        
+        correlations = {}
+        for ticker in self.stock_hedge_tickers + self.macro_hedge_tickers:
+            if ticker in self.filtered_returns.columns:
+                corr = np.corrcoef(old_portfolio_returns, self.filtered_returns[ticker])[0, 1]
+                correlations[ticker] = corr
+                
+        # Sort from lowest (best hedge/negative) to highest correlation
+        self.sorted_correlations = sorted(correlations.items(), key=lambda item: item[1])
+
+    def run_min_variance_optimization(self):
+        """
+        STRATEGY D: Global Minimum Variance Optimization.
+        Calculates the alternative "Absolute Defense" portfolio that strictly 
+        minimizes volatility regardless of the return tradeoff.
+        """
+        # Objective: Minimize Volatility
+        def objective_min_vol(new_amounts): 
+            return self._get_portfolio_metrics(new_amounts)[1] * 1000
+        
+        constraints = (
+            {'type': 'eq', 'fun': lambda x: np.sum(x[:self.num_stock]) - config.stock_budget},
+            {'type': 'eq', 'fun': lambda x: np.sum(x[self.num_stock:]) - config.macro_budget}
+        )
+        bounds = tuple((0, max(config.stock_budget, config.macro_budget)) for _ in range(self.total_new))
+        initial_guess = np.array([config.stock_budget / self.num_stock] * self.num_stock + 
+                                 [config.macro_budget / self.num_macro] * self.num_macro)
+                                 
+        opt_res = minimize(objective_min_vol, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints)
+        
+        self.min_var_amounts = opt_res.x
+        self.min_var_return, self.min_var_risk, self.min_var_sharpe = self._get_portfolio_metrics(self.min_var_amounts)
