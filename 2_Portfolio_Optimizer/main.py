@@ -162,6 +162,25 @@ if __name__ == "__main__":
     print("="*65)
     print("Moving averages calculated. Visualizing trend signals...")
     print("-" * 65)
+
+        # 9. STRATEGY I: TREND SCANNER
+    engine.run_trend_scanner()
+    print("\n" + "="*75)
+    print(" 📖 TREND SCANNER: MARKET STATUS BASED ON SMA RULES")
+    print("="*75)
+    
+    print("\n🟢 BULLISH (Uptrend):")
+    for t, p, s20, s50 in engine.bullish:
+        print(f" > {t:<6} | Price: ${p:>7.2f} | SMA20: ${s20:>7.2f} | SMA50: ${s50:>7.2f}")
+
+    print("\n🔴 BEARISH (Downtrend):")
+    for t, p, s20, s50 in engine.bearish:
+        print(f" > {t:<6} | Price: ${p:>7.2f} | SMA20: ${s20:>7.2f} | SMA50: ${s50:>7.2f}")
+
+    print("\n🟡 CONSOLIDATION (Range/Wavering):")
+    for t, p, s20, s50 in engine.consolidation:
+        print(f" > {t:<6} | Price: ${p:>7.2f} | SMA20: ${s20:>7.2f} | SMA50: ${s50:>7.2f}")
+    print("="*75)
     
     # 9. RENDER VISUALS (ALWAYS AT THE END)
     print("\n🎨 Triggering Rendering Engine for Plots...")
