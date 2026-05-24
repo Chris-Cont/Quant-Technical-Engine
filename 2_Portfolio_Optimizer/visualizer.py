@@ -380,3 +380,63 @@ def generate_plots(engine):
 
         plt.tight_layout()
         plt.show()
+
+    # -- STRATEGY O: ULTIMATE CANDLESTICK DASHBOARD --
+    if hasattr(engine, 'ultimate_dash_df'):
+        from mplfinance.original_flavor import candlestick_ohlc
+        import matplotlib.dates as mdates
+
+        df_plot = engine.ultimate_dash_df.reset_index()
+        df_plot['Date_mpl'] = df_plot['Date'].apply(lambda x: mdates.date2num(x))
+        ohlc = df_plot[['Date_mpl', 'Open', 'High', 'Low', 'Close']].values
+        buy_points = df_plot[df_plot['Buy_Signal']]
+        sell_points = df_plot[df_plot['Sell_Signal']]
+
+        plt.style.use('dark_background')
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(16, 20), sharex=True, 
+                                                 gridspec_kw={'height_ratios': [3.5, 1, 1, 1.5]})
+        fig.suptitle(f'Advanced Technical Analysis: {engine.ultimate_ticker}', fontsize=20, fontweight='bold', color='white', y=0.92)
+
+        # Panel 1: Price, SMAs & Signals
+        candlestick_ohlc(ax1, ohlc, width=0.6, colorup='#2ecc71', colordown='#e74c3c')
+        ax1.plot(df_plot['Date_mpl'], df_plot['SMA_50'], color='#f39c12', linewidth=2.5, label='SMA 50')
+        ax1.plot(df_plot['Date_mpl'], df_plot['SMA_200'], color='#3498db', linewidth=3.5, label='SMA 200')
+        ax1.scatter(buy_points['Date_mpl'], buy_points['Low'] * 0.98, marker='^', color='#2ecc71', s=200, zorder=5, label='Buy Signal')
+        ax1.scatter(sell_points['Date_mpl'], sell_points['High'] * 1.02, marker='v', color='#e74c3c', s=200, zorder=5, label='Sell Signal')
+        ax1.set_title('1. Price Action, Trend & Signals', color='#bdc3c7', fontsize=13, loc='left')
+        ax1.set_ylabel('Price (USD)')
+        ax1.grid(True, linestyle='--', alpha=0.3)
+        ax1.legend(loc='upper left')
+
+        # Panel 2: RSI 14
+        ax2.plot(df_plot['Date_mpl'], df_plot['RSI_14'], color='#3498db', linewidth=2)
+        ax2.axhline(70, color='#e74c3c', linestyle='--', alpha=0.5)
+        ax2.axhline(30, color='#2ecc71', linestyle='--', alpha=0.5)
+        ax2.set_title('2. RSI (14) - Momentum Strength', color='#bdc3c7', fontsize=12, loc='left')
+        ax2.set_ylim(0, 100)
+        ax2.set_ylabel('RSI')
+        ax2.grid(True, linestyle='--', alpha=0.3)
+
+        # Panel 3: Stochastic
+        ax3.plot(df_plot['Date_mpl'], df_plot['Stoch_K'], color='#2980b9', linewidth=2, label='%K')
+        ax3.plot(df_plot['Date_mpl'], df_plot['Stoch_D'], color='#e74c3c', linewidth=2, linestyle='--', label='%D')
+        ax3.set_title('3. Stochastic Oscillator', color='#bdc3c7', fontsize=12, loc='left')
+        ax3.set_ylabel('Stoch')
+        ax3.set_ylim(0, 100)
+        ax3.legend(loc='upper left')
+        ax3.grid(True, linestyle='--', alpha=0.3)
+
+        # Panel 4: MACD
+        colors = ['#2ecc71' if val >= 0 else '#e74c3c' for val in df_plot['MACD_Hist']]
+        ax4.bar(df_plot['Date_mpl'], df_plot['MACD_Hist'], color=colors, alpha=0.5, label='MACD Histogram')
+        ax4.plot(df_plot['Date_mpl'], df_plot['MACD'], color='#3498db', linewidth=2, label='MACD Line')
+        ax4.plot(df_plot['Date_mpl'], df_plot['Signal_Line'], color='#e67e22', linewidth=2, linestyle='--', label='Signal Line')
+        ax4.set_title('4. MACD Momentum', color='#bdc3c7', fontsize=12, loc='left')
+        ax4.set_ylabel('MACD')
+        ax4.set_xlabel('Date')
+        ax4.legend(loc='upper left')
+        ax4.grid(True, linestyle='--', alpha=0.3)
+
+        plt.tight_layout()
+        plt.show()
+        plt.style.use('ggplot')
