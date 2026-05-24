@@ -205,7 +205,7 @@ def generate_plots(engine):
     else:
         print("\n⚠️ Gold projection plot skipped (Target ticker not found in portfolio).")
         
-            # -- STRATEGY J: MARKET CYCLE QUADRANTS SCATTER PLOT --
+    # -- STRATEGY J: MARKET CYCLE QUADRANTS SCATTER PLOT --
     if hasattr(engine, 'df_quadrants') and not engine.df_quadrants.empty:
         fig, ax = plt.subplots(figsize=(14, 10))
         df_plot = engine.df_quadrants
