@@ -21,6 +21,7 @@ if __name__ == "__main__":
      # TECHNICAL ANALYSIS
     engine.calculate_technical_indicators(ticker='SPY') # <-- you can type ticker you want
     engine.calculate_pro_dashboard_indicators(ticker='SPY') # <-- you can type ticker you want
+    engine.run_sniper_scanner() 
     
     # STRATEGY EXTENSIONS
     engine.analyze_vix_sharpe()
@@ -196,6 +197,26 @@ if __name__ == "__main__":
     print("="*75)
     print("MACD, RSI, and Stochastic oscillators computed. Matrix queued for rendering.")
     print("-" * 75)
+
+    # 9.7 STRATEGY L: THE SNIPER SCANNER
+    print("\n" + "="*75)
+    print(" 🎯 STRATEGY L: THE SNIPER SCANNER (ALGORITHMIC CONFLUENCE)")
+    print("="*75)
+    
+    print("\n🟢 PURE BUY SIGNALS (RSI + MACD + Stoch Alignment):")
+    print("-" * 75)
+    if not engine.sniper_buy_signals: 
+        print(" > No absolute setups today. Patience pays.")
+    for t, status, p, rsi, stoch in engine.sniper_buy_signals:
+        print(f" 🚀 {t:<5} | Price: ${p:>7.2f} | RSI: {rsi:>5.1f} | Stoch: {stoch:>5.1f} | Type: {status}")
+
+    print("\n🟡 RADAR / WATCHLIST (Extreme Panic - Ready to Bounce):")
+    print("-" * 75)
+    if not engine.sniper_watch_list: 
+        print(" > No extreme oversold assets found.")
+    for t, msg, p, rsi in engine.sniper_watch_list:
+        print(f" 👀 {t:<5} | Price: ${p:>7.2f} | RSI: {rsi:>5.1f} | Status: {msg}")
+    print("="*75)
     
     # 10. RENDER VISUALS (ALWAYS AT THE END)
     print("\n🎨 Triggering Rendering Engine for Plots...")
