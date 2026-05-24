@@ -431,3 +431,50 @@ class PortfolioQuantEngine:
                     
             except Exception:
                 continue
+                
+            def run_macro_monte_carlo(self, ticker='SPY', sim_years=5):
+        """
+        STRATEGY M: Macro Dashboard & 5-Year Monte Carlo.
+        Fetches 10-year historical data for a specific asset and the US 10-Year Treasury Yield (^TNX)
+        to run a long-term (5-year) Monte Carlo projection alongside macro interest rate tracking.
+        """
+        print(f"🌍 Running {sim_years}-Year Macro Monte Carlo & Fed Yield analysis for {ticker}...")
+        
+        # 1. Download 10 years of data for statistical significance
+        macro_data = yf.download([ticker, '^TNX'], period="10y", progress=False)['Close'].dropna()
+        
+        if ticker not in macro_data.columns or '^TNX' not in macro_data.columns:
+            print("⚠️ Warning: Could not fetch data for Macro Monte Carlo.")
+            return
+
+        stock_prices = macro_data[ticker]
+        self.macro_rates = macro_data['^TNX'] # US 10-Year Yield
+        
+        # 2. Monte Carlo Math Setup
+        log_returns = np.log(stock_prices / stock_prices.shift(1)).dropna()
+        mu = log_returns.mean()
+        sigma = log_returns.std()
+        self.macro_last_price = stock_prices.iloc[-1]
+        
+        sim_days = sim_years * 252
+        sims = 1000
+        
+        price_paths = np.zeros((sim_days + 1, sims))
+        price_paths[0] = self.macro_last_price
+        
+        Z = np.random.normal(0, 1, (sim_days, sims))
+        daily_sim_returns = mu + sigma * Z
+        
+        for t in range(1, sim_days + 1):
+            price_paths[t] = price_paths[t-1] * np.exp(daily_sim_returns[t-1])
+            
+        # Extract Confidence Intervals
+        self.macro_best_path = np.percentile(price_paths, 90, axis=1)
+        self.macro_median_path = np.percentile(price_paths, 50, axis=1)
+        self.macro_worst_path = np.percentile(price_paths, 10, axis=1)
+        
+        # Save variables for the visualizer
+        self.macro_future_dates = pd.date_range(start=stock_prices.index[-1], periods=sim_days + 1, freq='B')
+        self.macro_hist_prices = stock_prices
+        self.macro_ticker = ticker
+        self.macro_sim_years = sim_years
