@@ -23,6 +23,7 @@ if __name__ == "__main__":
     engine.calculate_pro_dashboard_indicators(ticker='SPY') # <-- you can type ticker you want
     engine.run_sniper_scanner()
     engine.run_macro_monte_carlo(ticker='SPY', sim_years=5) 
+    engine.run_holistic_screener()
     
     # STRATEGY EXTENSIONS
     engine.analyze_vix_sharpe()
@@ -234,7 +235,63 @@ if __name__ == "__main__":
         print(f"Bull Case (Top 10%)    : ${engine.macro_best_path[-1]:>7.2f} (Return: {best_ret:>6.1f}%)")
         print(f"Bear Case (Bottom 10%) : ${engine.macro_worst_path[-1]:>7.2f} (Return: {worst_ret:>6.1f}%)")
         print("="*75)
+
+
+            # 9.9 STRATEGY N: HOLISTIC SCREENER & ACTION MATRIX
+    print("\n" + "="*85)
+    print(" 📟 STRATEGY N: ACTION MATRIX (RSI + MACD + STOCHASTIC)")
+    print("="*85)
     
-    # 10. RENDER VISUALS (ALWAYS AT THE END)
+    print(f"{'TICKER':<7} | {'PRICE ($)':<9} | {'RSI (Power)':<12} | {'STOCH (Spring)':<16} | {'MACD (Momentum)':<22} | {'VERDICT':<15}")
+    print("-" * 85)
+
+    order = {"STRONG BUY 🟢": 1, "BUY 📈": 2, "HOLD 🟡": 3, "SELL 📉": 4, "STRONG SELL 🔴": 5}
+    engine.screener_results.sort(key=lambda x: order.get(x[5], 99))
+
+    for t, p, rsi, stoch, macd, action in engine.screener_results:
+        print(f"{t:<7} | ${p:<8.2f} | {rsi:<12.1f} | {stoch:<16.1f} | {macd:<22} | {action}")
+    print("="*85)
+
+    if engine.screener_failed:
+        print(f"⚠️ WARNING: Ignored tickers (Symbol error or lack of data): {', '.join(engine.screener_failed)}")
+        print("="*85)
+
+    # 10. TRADER'S CHEAT SHEET
+    print("\n" + "="*85)
+    print(" 📖 THE QUANT TRADER'S CHEAT SHEET")
+    print("="*85)
+    print("""
+1. SMA (Moving Averages) - "The Road & The Trend"
+   - SMA 200 (The King): Macro trend (1 year). 
+     * Price > SMA 200 = Bull Market (Healthy). 
+     * Price < SMA 200 = Bear Market (Stay away).
+   - SMA 50 (The Lieutenant): Medium-term trend. Acts as dynamic Support/Resistance.
+
+2. RSI (Relative Strength Index) - "The Speedometer"
+   - RSI < 30 (Oversold): Panic. Asset is cheap.
+   - RSI > 70 (Overbought): Greed. Asset is expensive.
+   - RSI at 50 (Neutral): Choppy market.
+   * Golden Signal: Drops below 30, then hooks UP (Bullish divergence).
+
+3. Stochastic Oscillator - "The Coiled Spring"
+   - Under 20: Spring is fully compressed.
+   - Over 80: Spring is stretched and ready to snap.
+   * Golden Signal: Both lines < 20, and Fast line crosses Slow line UP.
+
+4. MACD - "The Gas Pedal"
+   - Green Bars: Buyers in control (Bullish Momentum).
+   - Red Bars: Sellers in control (Bearish Momentum).
+   * Golden Signal: MACD Line crosses Signal Line UP (Bullish Crossover).
+
+🎯 THE ULTIMATE BUY SETUP (Confluence):
+   [1] The Permission: Price is ABOVE SMA 200 & SMA 50.
+   [2] The Opportunity: Price drops (touches SMA) & RSI < 35.
+   [3] The Spring: Stochastic < 20 & crosses UP.
+   [4] The Gas Pedal: MACD creates Bullish Crossover.
+   => RESULT: Buying a premium asset at a discount, exactly when Smart Money enters!
+    """)
+    print("="*85)
+    
+    # 11. RENDER VISUALS (ALWAYS AT THE END)
     print("\n🎨 Triggering Rendering Engine for Plots...")
     visualizer.generate_plots(engine)
