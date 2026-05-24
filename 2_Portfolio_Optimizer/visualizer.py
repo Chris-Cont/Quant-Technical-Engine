@@ -88,6 +88,33 @@ def generate_plots(engine):
     plt.tight_layout()
     plt.show()
 
+        # -- STRATEGY E: VIX PENALTY CHART (UNHEDGED PORTFOLIO) --
+    if hasattr(engine, 'cum_real_old'):
+        fig, ax1 = plt.subplots(figsize=(14, 7))
+
+        # Black line: Actual Return of Base Portfolio
+        ax1.plot(engine.cum_real_old.index, engine.cum_real_old, color='black', linewidth=2, label='Base Portfolio - Actual Return')
+
+        # Red dashed line: VIX-Adjusted Return
+        ax1.plot(engine.cum_adj_old.index, engine.cum_adj_old, color='#e74c3c', linewidth=2.5, linestyle='--', 
+                 label='Base Portfolio - VIX-Adjusted ($r_t / VIX_t$)')
+
+        # Grey panic zones
+        for day in engine.high_vix_days:
+            ax1.axvline(x=day, color='grey', alpha=0.05, linewidth=2)
+
+        ax1.set_title('The Penalty of Volatility (VIX) on the Unhedged Portfolio', fontsize=15, fontweight='bold')
+        ax1.set_ylabel('Cumulative Return (%)', fontsize=12)
+        ax1.set_xlabel('Date', fontsize=12)
+        ax1.grid(True, linestyle='--', alpha=0.5)
+
+        # Custom Legend
+        lines, labels = ax1.get_legend_handles_labels()
+        vix_patch = mpatches.Patch(color='grey', alpha=0.3, label='High VIX Periods (>25)')
+        ax1.legend(handles=lines + [vix_patch], loc='upper left', fontsize=11)
+
+        plt.tight_layout()
+        plt.show()
     # -- ROLLING CORRELATIONS & 180-DAY PROJECTION --
     old_w = engine.old_amounts / np.sum(engine.old_amounts)
     base_returns = engine.filtered_returns[engine.old_tickers].dot(old_w)
