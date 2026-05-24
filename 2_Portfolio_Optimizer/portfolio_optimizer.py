@@ -552,3 +552,35 @@ class PortfolioQuantEngine:
             except Exception:
                 self.screener_failed.append(ticker)
    
+    def calculate_ultimate_dashboard(self, ticker='SPY'):
+        """
+        STRATEGY O: Ultimate Candlestick Dashboard.
+        Calculates OHLC, RSI, MACD, and buy/sell triggers for the 150-day 
+        technical visualizer dashboard.
+        """
+        df = yf.download(ticker, period="1y", progress=False)
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+        df = df[['Open', 'High', 'Low', 'Close', 'Volume']].dropna()
+
+        # Indicators
+        df['SMA_50'] = df['Close'].rolling(window=50).mean()
+        df['SMA_200'] = df['Close'].rolling(window=200).mean()
+
+        delta = df['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        df['RSI'] = 100 - (100 / (1 + (gain / loss)))
+
+        ema_12 = df['Close'].ewm(span=12, adjust=False).mean()
+        ema_26 = df['Close'].ewm(span=26, adjust=False).mean()
+        df['MACD'] = ema_12 - ema_26
+        df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+        df['MACD_Hist'] = df['MACD'] - df['Signal']
+
+        # Signal Triggers
+        df['Buy_Signal'] = (df['MACD'] > df['Signal']) & (df['MACD'].shift(1) <= df['Signal'].shift(1))
+        df['Sell_Signal'] = (df['MACD'] < df['Signal']) & (df['MACD'].shift(1) >= df['Signal'].shift(1))
+
+        self.ultimate_dash_df = df.iloc[-150:].copy()
+        self.ultimate_ticker = ticker
