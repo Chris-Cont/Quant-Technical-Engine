@@ -11,6 +11,8 @@ class PortfolioQuantEngine:
         self.old_investments = config.old_investments
         self.stock_hedge_tickers = config.stock_hedge_tickers
         self.macro_hedge_tickers = config.macro_hedge_tickers
+
+        self.old_tickers = list(self.old_investments.keys())
         
         self.all_tickers = list(self.old_investments.keys()) + self.stock_hedge_tickers + self.macro_hedge_tickers
         self.tickers_with_vix = self.all_tickers + ['^VIX']
