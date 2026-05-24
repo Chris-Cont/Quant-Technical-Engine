@@ -108,7 +108,7 @@ class PortfolioQuantEngine:
         self.port_cum_1y = np.exp(self.port_daily_1y.cumsum()) - 1
         self.spy_cum_1y = np.exp(self.spy_daily_1y.cumsum()) - 1
 
-        def max_drawdown(ret_series):
+    def max_drawdown(ret_series):
             comp = (ret_series + 1).cumprod()
             return float(((comp / comp.expanding(min_periods=1).max()) - 1).min())
 
@@ -183,7 +183,7 @@ class PortfolioQuantEngine:
         vix_normal = self.aligned_vix[self.aligned_vix < config.VIX_THRESHOLD]
         vix_stress = self.aligned_vix[self.aligned_vix >= config.VIX_THRESHOLD]
         
-        def calc_sharpe(returns_df, tickers):
+    def calc_sharpe(returns_df, tickers):
             """Internal helper to calculate annualized Sharpe Ratio."""
             valid_tickers = [t for t in tickers if t in returns_df.columns]
             if len(returns_df) == 0 or len(valid_tickers) == 0: return 0
@@ -256,9 +256,6 @@ class PortfolioQuantEngine:
             self.worst_path = np.percentile(self.gld_paths, 10, axis=1)
             self.future_gld_dates = pd.date_range(start=self.gld_hist_dates[-1], periods=self.days_left_2026 + 1, freq='B')
 
-
-
-
     def calculate_hedge_correlations(self):
         """
         STRATEGY C: Hedging Correlation Analytics.
@@ -285,7 +282,7 @@ class PortfolioQuantEngine:
         minimizes volatility regardless of the return tradeoff.
         """
         # Objective: Minimize Volatility
-        def objective_min_vol(new_amounts): 
+    def objective_min_vol(new_amounts): 
             return self._get_portfolio_metrics(new_amounts)[1] * 1000
         
         constraints = (
@@ -300,9 +297,6 @@ class PortfolioQuantEngine:
         
         self.min_var_amounts = opt_res.x
         self.min_var_return, self.min_var_risk, self.min_var_sharpe = self._get_portfolio_metrics(self.min_var_amounts)
-
-
-
 
     def calculate_vix_adjusted_returns(self):
         """
@@ -392,3 +386,32 @@ class PortfolioQuantEngine:
         
         self.ta_price_data = price_data # Save for visualizer
         self.ta_ticker = ticker
+        
+    def run_trend_scanner(self):
+        """
+        STRATEGY I: Market Trend Scanner.
+        Scans all assets for Bullish/Bearish status based on 20/50 SMA rules.
+        """
+        print("🔍 Scanning portfolio trends...")
+        # Get data for all tickers (portfolio + hedge candidates)
+        scan_data = yf.download(self.all_tickers, period="6mo", progress=False)['Close']
+        
+        self.bullish, self.bearish, self.consolidation = [], [], []
+        
+        for ticker in self.all_tickers:
+            try:
+                prices = scan_data[ticker].dropna()
+                if len(prices) < 50: continue
+                
+                last_price = prices.iloc[-1]
+                sma_20 = prices.rolling(window=20).mean().iloc[-1]
+                sma_50 = prices.rolling(window=50).mean().iloc[-1]
+                
+                if last_price > sma_20 and last_price > sma_50:
+                    self.bullish.append((ticker, last_price, sma_20, sma_50))
+                elif last_price < sma_20 and last_price < sma_50:
+                    self.bearish.append((ticker, last_price, sma_20, sma_50))
+                else:
+                    self.consolidation.append((ticker, last_price, sma_20, sma_50))
+            except:
+                continue
