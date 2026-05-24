@@ -115,6 +115,35 @@ def generate_plots(engine):
 
         plt.tight_layout()
         plt.show()
+
+        # -- STRATEGY F: ROLLING VOLATILITY CHART --
+    if hasattr(engine, 'real_rolling_vol'):
+        fig, ax1 = plt.subplots(figsize=(14, 7))
+
+        # Black line: Real Rolling Volatility (The Heartbeat)
+        ax1.plot(engine.real_rolling_vol.index, engine.real_rolling_vol, color='black', linewidth=2, label='Actual Risk (Base Tech Portfolio)')
+
+        # Red line: VIX-Adjusted Rolling Volatility (The Flattening)
+        ax1.plot(engine.adj_rolling_vol.index, engine.adj_rolling_vol, color='#e74c3c', linewidth=3, linestyle='-', alpha=0.9, 
+                 label='VIX-Adjusted Risk (Target Volatility)')
+
+        # Grey panic zones (using the high_vix_days from Strategy E)
+        if hasattr(engine, 'high_vix_days'):
+            for day in engine.high_vix_days:
+                ax1.axvline(x=day, color='grey', alpha=0.05, linewidth=2)
+
+        ax1.set_title('The Truth of Risk: How VIX-Adjustment Flattens Volatility Spikes', fontsize=15, fontweight='bold')
+        ax1.set_ylabel('Annualized Volatility (%)', fontsize=12)
+        ax1.set_xlabel('Date', fontsize=12)
+        ax1.grid(True, linestyle='--', alpha=0.5)
+
+        # Custom Legend
+        lines, labels = ax1.get_legend_handles_labels()
+        vix_patch = mpatches.Patch(color='grey', alpha=0.3, label='High VIX Periods (Panic)')
+        ax1.legend(handles=lines + [vix_patch], loc='upper left', fontsize=11)
+
+        plt.tight_layout()
+        plt.show()
     # -- ROLLING CORRELATIONS & 180-DAY PROJECTION --
     old_w = engine.old_amounts / np.sum(engine.old_amounts)
     base_returns = engine.filtered_returns[engine.old_tickers].dot(old_w)
