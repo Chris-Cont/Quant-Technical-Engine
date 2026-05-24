@@ -18,6 +18,8 @@ if __name__ == "__main__":
     engine.prepare_risk_and_correlation()
     engine.calculate_rolling_volatility()
     engine.run_monte_carlo_comparison() 
+     # TECHNICAL ANALYSIS
+    engine.calculate_technical_indicators(ticker='SPY') # <-- you can type ticker you want
     
     # STRATEGY EXTENSIONS
     engine.analyze_vix_sharpe()
@@ -152,6 +154,13 @@ if __name__ == "__main__":
     print(" 🔮 STRATEGY G: MONTE CARLO PROBABILISTIC OUTCOMES")
     print("="*65)
     print("Simulations complete. Comparing raw uncertainty against volatility-managed paths.")
+    print("-" * 65)
+
+    # 8.8 STRATEGY H: TECHNICAL ANALYSIS
+    print("\n" + "="*65)
+    print(f" 📈 STRATEGY H: TECHNICAL ANALYSIS (SMA/EMA) FOR {engine.ta_ticker}")
+    print("="*65)
+    print("Moving averages calculated. Visualizing trend signals...")
     print("-" * 65)
     
     # 9. RENDER VISUALS (ALWAYS AT THE END)
