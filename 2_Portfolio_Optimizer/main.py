@@ -147,6 +147,13 @@ if __name__ == "__main__":
     print("flattening effect in the upcoming rendering engine charts.")
     print("-" * 65)
     
+        # 8.7 STRATEGY G: MONTE CARLO PROJECTION
+    print("\n" + "="*65)
+    print(" 🔮 STRATEGY G: MONTE CARLO PROBABILISTIC OUTCOMES")
+    print("="*65)
+    print("Simulations complete. Comparing raw uncertainty against volatility-managed paths.")
+    print("-" * 65)
+    
     # 9. RENDER VISUALS (ALWAYS AT THE END)
     print("\n🎨 Triggering Rendering Engine for Plots...")
     visualizer.generate_plots(engine)
