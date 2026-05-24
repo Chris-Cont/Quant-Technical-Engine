@@ -166,3 +166,90 @@ class PortfolioQuantEngine:
         portfolio_vol = np.sqrt(np.dot(self.final_weights_filtered.T, np.dot(self.final_cov_matrix, self.final_weights_filtered)))
         marginal_contrib = np.dot(self.final_cov_matrix, self.final_weights_filtered) / portfolio_vol
         self.risk_contribution_pct = (self.final_weights_filtered * marginal_contrib) / portfolio_vol
+
+    def analyze_vix_sharpe(self):
+        """
+        STRATEGY A: Regime-Switching Sharpe Ratio Analysis.
+        Evaluates the risk-adjusted performance of the Base Portfolio vs the Macro Hedge 
+        under different market volatility regimes (Normal vs. High Stress/Panic).
+        """
+        # Fetch exact VIX dates to match our returns index
+        vix_data = yf.download('^VIX', start=self.all_returns.index[0], end=self.all_returns.index[-1], progress=False)['Close']
+        self.aligned_vix = vix_data.reindex(self.all_returns.index).ffill()
+        
+        # Define Volatility Regimes
+        vix_normal = self.aligned_vix[self.aligned_vix < config.VIX_THRESHOLD]
+        vix_stress = self.aligned_vix[self.aligned_vix >= config.VIX_THRESHOLD]
+        
+        def calc_sharpe(returns_df, tickers):
+            """Internal helper to calculate annualized Sharpe Ratio."""
+            valid_tickers = [t for t in tickers if t in returns_df.columns]
+            if len(returns_df) == 0 or len(valid_tickers) == 0: return 0
+            
+            # Equal weight assumption for the benchmark test
+            w = np.ones(len(valid_tickers)) / len(valid_tickers)
+            port_ret = returns_df[valid_tickers].dot(w)
+            
+            mean_ret = port_ret.mean() * 252
+            volatility = port_ret.std() * np.sqrt(252)
+            
+            if volatility == 0: return 0
+            return (mean_ret - config.risk_free_rate) / volatility
+
+        self.vix_metrics = {
+            "Metric (Return/Risk Profile)": [
+                "1. Standard Sharpe Ratio (All Market Days)", 
+                "2. VIX-Adjusted Sharpe (Calm Markets, VIX < 20)", 
+                "3. Stress Sharpe (Panic Markets, VIX >= 20)"
+            ],
+            "Base Portfolio (Equities)": [
+                calc_sharpe(self.all_returns, self.old_tickers),
+                calc_sharpe(self.all_returns.loc[vix_normal.index], self.old_tickers),
+                calc_sharpe(self.all_returns.loc[vix_stress.index], self.old_tickers)
+            ],
+            "Macro Hedge (Bonds/Cmdty)": [
+                calc_sharpe(self.all_returns, self.macro_hedge_tickers),
+                calc_sharpe(self.all_returns.loc[vix_normal.index], self.macro_hedge_tickers),
+                calc_sharpe(self.all_returns.loc[vix_stress.index], self.macro_hedge_tickers)
+            ]
+        }
+        self.df_vix_metrics = pd.DataFrame(self.vix_metrics)
+
+    def run_gold_monte_carlo(self):
+        """
+        STRATEGY B: Dynamic Monte Carlo Projection for Gold (GLD).
+        Simulates 1,000 future price paths using Geometric Brownian Motion (GBM) 
+        to forecast potential price action until the end of 2026.
+        """
+        # Identify the correct Gold ticker from the user's config
+        self.gold_ticker = 'GLD' if 'GLD' in self.all_returns.columns else ('GC=F' if 'GC=F' in self.all_returns.columns else None)
+        
+        if self.gold_ticker:
+            # Fetch last 1-year history for trend baseline
+            gld_prices = yf.download(self.gold_ticker, period="1y", progress=False)['Close'].squeeze()
+            self.gld_last_price = float(gld_prices.iloc[-1])
+            self.gld_hist_dates = gld_prices.index
+            self.gld_hist_prices = gld_prices.values
+            
+            # Trading days remaining until approximately Dec 31, 2026
+            self.days_left_2026 = 210 
+            
+            # Calculate drift (mu) and volatility (sigma) from recent history
+            gld_ret = self.all_returns[self.gold_ticker][-252:]
+            mu_gld = gld_ret.mean()
+            sigma_gld = gld_ret.std()
+            
+            sims = 1000
+            self.gld_paths = np.zeros((self.days_left_2026 + 1, sims))
+            self.gld_paths[0] = self.gld_last_price
+            
+            # GBM Formula Execution
+            for t in range(1, self.days_left_2026 + 1):
+                Z = np.random.normal(0, 1, sims)
+                self.gld_paths[t] = self.gld_paths[t-1] * np.exp(mu_gld + sigma_gld * Z)
+                
+            # Extract dynamic confidence intervals (Percentiles)
+            self.best_path = np.percentile(self.gld_paths, 90, axis=1)
+            self.median_path = np.percentile(self.gld_paths, 50, axis=1)
+            self.worst_path = np.percentile(self.gld_paths, 10, axis=1)
+            self.future_gld_dates = pd.date_range(start=self.gld_hist_dates[-1], periods=self.days_left_2026 + 1, freq='B')
