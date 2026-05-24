@@ -83,3 +83,12 @@ if __name__ == "__main__":
     # 6. Εκτέλεση Visualizer
     print("\n🎨 Παραγωγή Γραφημάτων...")
     visualizer.generate_plots(engine)
+
+    # 5.5 STRATEGY A: VIX SHARPE RATIO ANALYSIS
+    print("\n" + "="*65)
+    print(" 📊 STRATEGY A: SHARPE RATIO ANALYSIS (BASE VS MACRO HEDGE)")
+    print("="*65)
+    for i, row in engine.df_vix_metrics.iterrows():
+        print(f"\n{row['Metric (Return/Risk Profile)']}:")
+        print(f" > Base Portfolio : {row['Base Portfolio (Equities)']:.2f}")
+        print(f" > Macro Hedge    : {row['Macro Hedge (Bonds/Cmdty)']:.2f}")
