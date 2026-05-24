@@ -189,7 +189,14 @@ if __name__ == "__main__":
     print("="*75)
     print("Quadrant coordinate matrix computed. Generating visual representation...")
     print("-" * 75)
+
+        # 9.6 STRATEGY K: PRO TRADING DASHBOARD
+    print("\n" + "="*75)
+    print(f" 🎛️ STRATEGY K: PRO TRADING DASHBOARD INITIALIZED FOR {engine.pro_dash_ticker}")
+    print("="*75)
+    print("MACD, RSI, and Stochastic oscillators computed. Matrix queued for rendering.")
+    print("-" * 75)
     
-    # 9. RENDER VISUALS (ALWAYS AT THE END)
+    # 10. RENDER VISUALS (ALWAYS AT THE END)
     print("\n🎨 Triggering Rendering Engine for Plots...")
     visualizer.generate_plots(engine)
