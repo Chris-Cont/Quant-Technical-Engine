@@ -359,3 +359,75 @@ class PortfolioQuantEngine:
         # Save the last 252 trading days (1 year) for the visualizer
         self.pro_dash_data = df.iloc[-252:].copy()
         self.pro_dash_ticker = ticker
+    def run_sniper_scanner(self):
+        """
+        STRATEGY L: The Sniper Scanner (Algorithmic Confluence).
+        Scans all portfolio and hedge candidates for the ultimate 'Buy Setup' 
+        using RSI, MACD Histogram, and Stochastic Crossover confluence.
+        """
+        print("🎯 Sniper Scanner active: Searching for optimal confluence setups...")
+        scan_data = yf.download(self.all_tickers, period="1y", progress=False)
+
+        # Handle MultiIndex for multiple tickers
+        if isinstance(scan_data.columns, pd.MultiIndex):
+            close_data = scan_data['Close']
+            high_data = scan_data['High']
+            low_data = scan_data['Low']
+        else:
+            close_data = pd.DataFrame({self.all_tickers[0]: scan_data['Close']})
+            high_data = pd.DataFrame({self.all_tickers[0]: scan_data['High']})
+            low_data = pd.DataFrame({self.all_tickers[0]: scan_data['Low']})
+
+        self.sniper_buy_signals = []
+        self.sniper_watch_list = []
+
+        for ticker in self.all_tickers:
+            try:
+                df = pd.DataFrame({
+                    'Close': close_data[ticker],
+                    'High': high_data[ticker],
+                    'Low': low_data[ticker]
+                }).dropna()
+                
+                if len(df) < 200: continue
+                
+                df['SMA_200'] = df['Close'].rolling(window=200).mean()
+                
+                # RSI 14
+                delta = df['Close'].diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                rs = gain / loss
+                df['RSI'] = 100 - (100 / (1 + rs))
+                
+                # Stochastic 14,3,3
+                low_min = df['Low'].rolling(window=14).min()
+                high_max = df['High'].rolling(window=14).max()
+                df['Stoch_K_raw'] = 100 * ((df['Close'] - low_min) / (high_max - low_min))
+                df['Stoch_K'] = df['Stoch_K_raw'].rolling(window=3).mean()
+                df['Stoch_D'] = df['Stoch_K'].rolling(window=3).mean()
+                
+                # MACD 12,26,9
+                ema_12 = df['Close'].ewm(span=12, adjust=False).mean()
+                ema_26 = df['Close'].ewm(span=26, adjust=False).mean()
+                df['MACD'] = ema_12 - ema_26
+                df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+                df['MACD_Hist'] = df['MACD'] - df['Signal']
+                
+                # Execution Logic (Today vs Yesterday)
+                last = df.iloc[-1]
+                prev = df.iloc[-2] 
+                
+                # Confluence Conditions
+                cond_rsi = last['RSI'] < 45 
+                cond_stoch = (last['Stoch_K'] > last['Stoch_D']) and (prev['Stoch_K'] <= prev['Stoch_D']) and (last['Stoch_K'] < 40)
+                cond_macd = (last['MACD_Hist'] > prev['MACD_Hist']) 
+                
+                if cond_rsi and cond_stoch and cond_macd:
+                    status = "STRONG BUY (Dip in Uptrend)" if last['Close'] > last['SMA_200'] else "BOTTOM FISHING (High Risk)"
+                    self.sniper_buy_signals.append((ticker, status, last['Close'], last['RSI'], last['Stoch_K']))
+                elif cond_rsi and (last['Stoch_K'] < 20):
+                    self.sniper_watch_list.append((ticker, "Oversold - Awaiting Stoch Crossover", last['Close'], last['RSI']))
+                    
+            except Exception:
+                continue
