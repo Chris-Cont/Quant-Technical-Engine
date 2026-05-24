@@ -13,9 +13,11 @@ if __name__ == "__main__":
     engine.fetch_data_and_filter()
     engine.run_optimization()
     engine.calculate_vix_adjusted_returns()
+    engine.calculate_rolling_volatility()
     engine.run_backtests_and_stress()
     engine.run_forward_monte_carlo()
     engine.prepare_risk_and_correlation()
+    
     
     # STRATEGY EXTENSIONS
     engine.analyze_vix_sharpe()
@@ -135,6 +137,14 @@ if __name__ == "__main__":
     print(f"Risk Statistics (Base Tech Portfolio):")
     print(f" > Actual Volatility (Black Line)       : {engine.real_vol_old:.2%}")
     print(f" > VIX-Adjusted Volatility (Red Line)   : {engine.adj_vol_old:.2%}")
+    print("-" * 65)
+
+        # 8.6 STRATEGY F: ROLLING VOLATILITY ANALYSIS
+    print("\n" + "="*65)
+    print(" 🌪️ STRATEGY F: THE ULTIMATE PROOF - ROLLING VOLATILITY")
+    print("="*65)
+    print("Rolling risk calculations complete. Observe the 'Target Volatility'")
+    print("flattening effect in the upcoming rendering engine charts.")
     print("-" * 65)
     
     # 9. RENDER VISUALS (ALWAYS AT THE END)
