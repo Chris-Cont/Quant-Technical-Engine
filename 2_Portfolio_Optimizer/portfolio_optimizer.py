@@ -332,3 +332,15 @@ class PortfolioQuantEngine:
         
         # Save high VIX days for the visualizer
         self.high_vix_days = vix_aligned[vix_aligned > 25].index
+
+
+    def calculate_rolling_volatility(self, window=60):
+        """
+        STRATEGY F: Rolling Volatility Analysis.
+        Calculates the 60-day rolling volatility of the Base Portfolio
+        to visually and mathematically compare true market risk versus 
+        VIX-adjusted risk stabilization (Target Volatility).
+        """
+        # Note: This relies on calculate_vix_adjusted_returns() having run first
+        self.real_rolling_vol = self.old_port_returns.rolling(window).std() * np.sqrt(252) * 100
+        self.adj_rolling_vol = self.adj_old_returns.rolling(window).std() * np.sqrt(252) * 100
