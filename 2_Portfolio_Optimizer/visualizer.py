@@ -228,3 +228,23 @@ def generate_plots(engine):
         plt.suptitle('Projection to End of 2026: The Power of Risk Stabilization', fontsize=16, fontweight='bold')
         plt.tight_layout()
         plt.show()
+    # -- STRATEGY H: TECHNICAL ANALYSIS (SMA & EMA) --
+    if hasattr(engine, 'ta_price_data'):
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+
+        # Plot SMA
+        ax1.plot(engine.ta_price_data.index, engine.ta_price_data, color='black', linewidth=1.5, label=f'{engine.ta_ticker} Price', alpha=0.5)
+        ax1.plot(engine.sma_20.index, engine.sma_20, color='#3498db', linewidth=2, label='SMA (20)')
+        ax1.plot(engine.sma_50.index, engine.sma_50, color='#2980b9', linewidth=2, linestyle='--', label='SMA (50)')
+        ax1.set_title(f'Simple Moving Averages (SMA) for {engine.ta_ticker}', fontsize=14, fontweight='bold')
+        ax1.set_ylabel('Price (USD)'); ax1.legend(); ax1.grid(True, linestyle='--', alpha=0.5)
+
+        # Plot EMA
+        ax2.plot(engine.ta_price_data.index, engine.ta_price_data, color='black', linewidth=1.5, label=f'{engine.ta_ticker} Price', alpha=0.5)
+        ax2.plot(engine.ema_20.index, engine.ema_20, color='#e67e22', linewidth=2, label='EMA (20) - Fast')
+        ax2.plot(engine.ema_50.index, engine.ema_50, color='#d35400', linewidth=2, linestyle='--', label='EMA (50) - Slow')
+        ax2.set_title(f'Exponential Moving Averages (EMA) for {engine.ta_ticker}', fontsize=14, fontweight='bold')
+        ax2.set_ylabel('Price (USD)'); ax2.set_xlabel('Date'); ax2.legend(); ax2.grid(True, linestyle='--', alpha=0.5)
+
+        plt.tight_layout()
+        plt.show()
