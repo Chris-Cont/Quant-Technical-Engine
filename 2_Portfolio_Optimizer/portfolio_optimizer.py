@@ -375,3 +375,20 @@ class PortfolioQuantEngine:
         self.real_percentiles = np.percentile(self.real_paths, [90, 50, 10], axis=1)
         self.adj_percentiles = np.percentile(self.adj_paths, [90, 50, 10], axis=1)
         self.future_dates = pd.date_range(start=self.old_port_returns.index[-1], periods=days_left + 1, freq='B')
+    def calculate_technical_indicators(self, ticker='SPY'):
+        """
+        TECHNICAL ANALYSIS: SMA & EMA Calculation.
+        Computes 20 and 50-period Simple and Exponential Moving Averages
+        for trend analysis.
+        """
+        # Fetch data directly if not in historical data
+        price_data = yf.download(ticker, period="1y", progress=False)['Close'].dropna().squeeze()[-252:]
+        
+        # Calculate Indicators
+        self.sma_20 = price_data.rolling(window=20).mean()
+        self.sma_50 = price_data.rolling(window=50).mean()
+        self.ema_20 = price_data.ewm(span=20, adjust=False).mean()
+        self.ema_50 = price_data.ewm(span=50, adjust=False).mean()
+        
+        self.ta_price_data = price_data # Save for visualizer
+        self.ta_ticker = ticker
