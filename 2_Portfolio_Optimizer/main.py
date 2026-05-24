@@ -12,6 +12,7 @@ if __name__ == "__main__":
     engine = PortfolioQuantEngine()
     engine.fetch_data_and_filter()
     engine.run_optimization()
+    engine.calculate_vix_adjusted_returns()
     engine.run_backtests_and_stress()
     engine.run_forward_monte_carlo()
     engine.prepare_risk_and_correlation()
