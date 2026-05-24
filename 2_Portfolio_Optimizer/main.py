@@ -13,11 +13,10 @@ if __name__ == "__main__":
     engine.fetch_data_and_filter()
     engine.run_optimization()
     engine.calculate_vix_adjusted_returns()
-    engine.calculate_rolling_volatility()
     engine.run_backtests_and_stress()
     engine.run_forward_monte_carlo()
     engine.prepare_risk_and_correlation()
-    
+    engine.calculate_rolling_volatility()
     
     # STRATEGY EXTENSIONS
     engine.analyze_vix_sharpe()
