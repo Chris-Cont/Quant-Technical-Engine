@@ -17,6 +17,7 @@ if __name__ == "__main__":
     engine.run_forward_monte_carlo()
     engine.prepare_risk_and_correlation()
     engine.calculate_rolling_volatility()
+    engine.run_monte_carlo_comparison() 
     
     # STRATEGY EXTENSIONS
     engine.analyze_vix_sharpe()
