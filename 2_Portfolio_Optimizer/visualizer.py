@@ -204,3 +204,27 @@ def generate_plots(engine):
         plt.show()
     else:
         print("\n⚠️ Gold projection plot skipped (Target ticker not found in portfolio).")
+        
+    # -- STRATEGY G: COMPARATIVE MONTE CARLO PROJECTION --
+    if hasattr(engine, 'real_paths'):
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7), sharey=True)
+
+        # Plot 1: Raw Portfolio
+        ax1.plot(engine.future_dates, engine.real_percentiles[0], color='#2ecc71', linestyle='--', label=f'Top 10%: ${engine.real_percentiles[0,-1]:,.0f}')
+        ax1.plot(engine.future_dates, engine.real_percentiles[1], color='black', linestyle='-', linewidth=2.5, label=f'Median: ${engine.real_percentiles[1,-1]:,.0f}')
+        ax1.plot(engine.future_dates, engine.real_percentiles[2], color='#e74c3c', linestyle='--', label=f'Bottom 10%: ${engine.real_percentiles[2,-1]:,.0f}')
+        ax1.fill_between(engine.future_dates, engine.real_percentiles[2], engine.real_percentiles[0], color='black', alpha=0.1)
+        ax1.set_title('Unhedged Portfolio (High Uncertainty)', fontweight='bold')
+        ax1.set_xlabel('Date'); ax1.set_ylabel('Portfolio Value ($)'); ax1.grid(True, linestyle='--', alpha=0.5); ax1.legend(loc='upper left')
+
+        # Plot 2: VIX-Adjusted Portfolio
+        ax2.plot(engine.future_dates, engine.adj_percentiles[0], color='#2ecc71', linestyle='--', label=f'Top 10%: ${engine.adj_percentiles[0,-1]:,.0f}')
+        ax2.plot(engine.future_dates, engine.adj_percentiles[1], color='#c0392b', linestyle='-', linewidth=2.5, label=f'Median: ${engine.adj_percentiles[1,-1]:,.0f}')
+        ax2.plot(engine.future_dates, engine.adj_percentiles[2], color='#e74c3c', linestyle='--', label=f'Bottom 10%: ${engine.adj_percentiles[2,-1]:,.0f}')
+        ax2.fill_between(engine.future_dates, engine.adj_percentiles[2], engine.adj_percentiles[0], color='#e74c3c', alpha=0.15)
+        ax2.set_title('VIX-Adjusted Portfolio (Volatility Control)', fontweight='bold')
+        ax2.set_xlabel('Date'); ax2.grid(True, linestyle='--', alpha=0.5); ax2.legend(loc='upper left')
+
+        plt.suptitle('Projection to End of 2026: The Power of Risk Stabilization', fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        plt.show()
