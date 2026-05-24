@@ -298,3 +298,35 @@ class PortfolioQuantEngine:
         
         self.min_var_amounts = opt_res.x
         self.min_var_return, self.min_var_risk, self.min_var_sharpe = self._get_portfolio_metrics(self.min_var_amounts)
+
+
+
+
+    def calculate_vix_adjusted_returns(self):
+        """
+        STRATEGY E: VIX-Adjusted Returns Analysis.
+        Demonstrates the penalty of market volatility on the unhedged (Old) portfolio
+        by scaling returns inversely to the VIX level.
+        """
+        # 1. Calculate returns only for the old (Base/Tech) portfolio
+        old_w = self.old_amounts / np.sum(self.old_amounts)
+        self.old_port_returns = self.all_returns[self.old_tickers].dot(old_w)
+
+        # 2. Fetch and align VIX data
+        vix_data = yf.download('^VIX', start=self.all_returns.index[0], end=self.all_returns.index[-1], progress=False)['Close'].squeeze()
+        vix_aligned = vix_data.reindex(self.old_port_returns.index).ffill()
+        self.scale_factor = vix_aligned.mean()
+
+        # 3. Apply the VIX-adjustment formula
+        self.adj_old_returns = (self.old_port_returns / vix_aligned) * self.scale_factor
+
+        self.cum_real_old = (np.exp(self.old_port_returns.cumsum()) - 1) * 100
+        self.cum_adj_old = (np.exp(self.adj_old_returns.cumsum()) - 1) * 100
+
+        # 4. Statistical Conclusions
+        self.real_vol_old = self.old_port_returns.std() * np.sqrt(252)
+        # Unscaled vol for true comparison
+        self.adj_vol_old = (self.adj_old_returns / self.scale_factor).std() * np.sqrt(252) 
+        
+        # Save high VIX days for the visualizer
+        self.high_vix_days = vix_aligned[vix_aligned > 25].index
