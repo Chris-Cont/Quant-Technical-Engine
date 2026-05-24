@@ -205,6 +205,54 @@ def generate_plots(engine):
     else:
         print("\n⚠️ Gold projection plot skipped (Target ticker not found in portfolio).")
         
+            # -- STRATEGY J: MARKET CYCLE QUADRANTS SCATTER PLOT --
+    if hasattr(engine, 'df_quadrants') and not engine.df_quadrants.empty:
+        fig, ax = plt.subplots(figsize=(14, 10))
+        df_plot = engine.df_quadrants
+
+        # Dynamic boundaries for background shading
+        max_x, min_x = df_plot['Dist_SMA50'].max() + 5, df_plot['Dist_SMA50'].min() - 5
+
+        # Draw the 4 Quadrants
+        ax.axvspan(0, max_x, ymin=0.5, ymax=1, color='#2ecc71', alpha=0.15)      # Full Bull
+        ax.axvspan(min_x, 0, ymin=0, ymax=0.5, color='#e74c3c', alpha=0.15)     # Capitulation
+        ax.axvspan(min_x, 0, ymin=0.5, ymax=1, color='#f1c40f', alpha=0.1)      # Bear Market Rally
+        ax.axvspan(0, max_x, ymin=0, ymax=0.5, color='#f1c40f', alpha=0.1)      # Pullback
+
+        # Axes
+        ax.axhline(0, color='black', linewidth=1.5, linestyle='--')
+        ax.axvline(0, color='black', linewidth=1.5, linestyle='--')
+
+        # Scatter points
+        ax.scatter(df_plot['Dist_SMA50'], df_plot['Dist_SMA20'], color='#2c3e50', s=80, edgecolors='white', zorder=5)
+
+        # Labels for tickers
+        for i, row in df_plot.iterrows():
+            ax.text(row['Dist_SMA50'] + 0.3, row['Dist_SMA20'] + 0.3, row['Ticker'], 
+                    fontsize=11, fontweight='bold', color='black')
+
+        # Formatting
+        ax.set_title('Market Cycle Quadrants (Asset Positioning)', fontsize=16, fontweight='bold', pad=20)
+        ax.set_xlabel('Macro Trend (% Distance from SMA 50)', fontsize=12)
+        ax.set_ylabel('Micro Momentum (% Distance from SMA 20)', fontsize=12)
+
+        # Wall Street Slang Labels
+        ax.text(df_plot['Dist_SMA50'].max(), df_plot['Dist_SMA20'].max(), '🟢 FULL BULL\n(Mark-Up Phase)', 
+                fontsize=14, color='green', alpha=0.5, ha='right', va='top', fontweight='bold')
+                
+        ax.text(df_plot['Dist_SMA50'].min(), df_plot['Dist_SMA20'].min(), '🔴 CAPITULATION\n(Mark-Down / Panic)', 
+                fontsize=14, color='red', alpha=0.5, ha='left', va='bottom', fontweight='bold')
+                
+        ax.text(df_plot['Dist_SMA50'].min(), df_plot['Dist_SMA20'].max(), '🟡 BEAR MARKET RALLY\n(Dead Cat Bounce?)', 
+                fontsize=12, color='olive', alpha=0.5, ha='left', va='top', fontweight='bold')
+                
+        ax.text(df_plot['Dist_SMA50'].max(), df_plot['Dist_SMA20'].min(), '🟡 PULLBACK\n(Healthy Correction / Buy the Dip)', 
+                fontsize=12, color='olive', alpha=0.5, ha='right', va='bottom', fontweight='bold')
+
+        plt.grid(True, linestyle=':', alpha=0.6)
+        plt.tight_layout()
+        plt.show()
+        
     # -- STRATEGY G: COMPARATIVE MONTE CARLO PROJECTION --
     if hasattr(engine, 'real_paths'):
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7), sharey=True)
