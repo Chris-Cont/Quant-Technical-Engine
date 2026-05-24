@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
+from matplotlib.ticker import StrMethodFormatter
 import numpy as np
 import pandas as pd
 import config
@@ -337,6 +338,45 @@ def generate_plots(engine):
         ax4.plot(df_plot.index, df_plot['Signal_Line'], color='blue', linewidth=2, linestyle='--', label='Signal Line (9)')
         ax4.set_title('4. MACD (Momentum Crossovers & Divergence)', fontsize=12, loc='left', fontweight='bold')
         ax4.set_ylabel('MACD'); ax4.set_xlabel('Date'); ax4.legend(loc='upper left'); ax4.grid(True, linestyle='--', alpha=0.5)
+
+        plt.tight_layout()
+        plt.show()
+        
+            # -- STRATEGY M: MACRO DASHBOARD & 5-YEAR MONTE CARLO --
+    if hasattr(engine, 'macro_ticker'):
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 12), gridspec_kw={'height_ratios': [1, 2]})
+
+        # --- Top Panel: US Treasury Yields ---
+        ax1.plot(engine.macro_rates.index, engine.macro_rates, color='#c0392b', linewidth=2)
+        ax1.fill_between(engine.macro_rates.index, engine.macro_rates, color='#c0392b', alpha=0.1)
+        ax1.set_title('Macroeconomic Environment: US 10-Year Treasury Yield (%)', fontsize=14, fontweight='bold')
+        ax1.set_ylabel('Yield (%)', fontsize=12)
+        ax1.grid(True, linestyle='--', alpha=0.5)
+        ax1.yaxis.set_major_formatter(StrMethodFormatter('{x:.1f}'))
+
+        current_rate = engine.macro_rates.iloc[-1]
+        ax1.text(engine.macro_rates.index[-1], current_rate + 0.5, f"Current Yield:\n{current_rate:.2f}%", 
+                 fontsize=12, fontweight='bold', bbox=dict(facecolor='white', alpha=0.8))
+
+        # --- Bottom Panel: 5-Year Monte Carlo ---
+        hist_dates = engine.macro_hist_prices.index[-750:]
+        hist_prices = engine.macro_hist_prices[-750:]
+
+        ax2.plot(hist_dates, hist_prices, color='black', linewidth=2, label='Historical Price')
+        ax2.plot(engine.macro_future_dates, engine.macro_best_path, color='#2ecc71', linestyle='--', linewidth=2, label=f'Best Case (Top 10%): ${engine.macro_best_path[-1]:,.1f}')
+        ax2.plot(engine.macro_future_dates, engine.macro_median_path, color='#3498db', linestyle='-', linewidth=2.5, label=f'Median Projection: ${engine.macro_median_path[-1]:,.1f}')
+        ax2.plot(engine.macro_future_dates, engine.macro_worst_path, color='#e74c3c', linestyle='--', linewidth=2, label=f'Worst Case (Bottom 10%): ${engine.macro_worst_path[-1]:,.1f}')
+        ax2.fill_between(engine.macro_future_dates, engine.macro_worst_path, engine.macro_best_path, color='#3498db', alpha=0.1)
+
+        ax2.set_title(f'Long-Term Horizon: {engine.macro_sim_years}-Year Monte Carlo Projection for {engine.macro_ticker}', fontsize=14, fontweight='bold')
+        ax2.set_ylabel('Stock Price (USD)', fontsize=12)
+        ax2.set_xlabel('Date', fontsize=12)
+        ax2.legend(loc='upper left', fontsize=12)
+        ax2.grid(True, linestyle='--', alpha=0.5)
+        ax2.yaxis.set_major_formatter(StrMethodFormatter('{x:.1f}'))
+
+        ax2.axvline(x=engine.macro_hist_prices.index[-1], color='grey', linestyle=':', linewidth=2)
+        ax2.text(engine.macro_hist_prices.index[-1] + pd.Timedelta(days=30), engine.macro_hist_prices.iloc[-1], 'TODAY 🚀', fontweight='bold')
 
         plt.tight_layout()
         plt.show()
