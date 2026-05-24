@@ -31,6 +31,8 @@ if __name__ == "__main__":
     engine.calculate_hedge_correlations()
     engine.run_min_variance_optimization()
 
+    engine.calculate_ultimate_dashboard(ticker='SPY')
+
     # 2. HISTORICAL STRESS TESTING
     scenarios = {
         "COVID-19 Crash (Feb - Mar 2020)": ("2020-02-19", "2020-03-23"),
