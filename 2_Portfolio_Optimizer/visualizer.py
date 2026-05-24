@@ -141,3 +141,34 @@ def generate_plots(engine):
     plt.axvline(x=last_date, color='grey', linestyle='--', alpha=0.7)
     plt.tight_layout()
     plt.show()
+
+    # -- STRATEGY B: GOLD DYNAMIC MONTE CARLO PROJECTION CHART --
+    if hasattr(engine, 'gold_ticker') and engine.gold_ticker:
+        plt.figure(figsize=(12, 7))
+        
+        # Plot trailing 1-year historical prices
+        plt.plot(engine.gld_hist_dates, engine.gld_hist_prices, color='#f1c40f', linewidth=2.5, label=f'Historical Price ({engine.gold_ticker})')
+        last_date = engine.gld_hist_dates[-1]
+        
+        # Plot projected trendlines
+        plt.plot(engine.future_gld_dates, engine.best_path, color='#2ecc71', linestyle='--', linewidth=2.5, label=f'Best Case (Top 10%): ${engine.best_path[-1]:.2f}')
+        plt.plot(engine.future_gld_dates, engine.median_path, color='#95a5a6', linestyle='-', linewidth=2.5, label=f'Base Trend (Median): ${engine.median_path[-1]:.2f}')
+        plt.plot(engine.future_gld_dates, engine.worst_path, color='#e74c3c', linestyle='--', linewidth=2.5, label=f'Worst Case (Bottom 10%): ${engine.worst_path[-1]:.2f}')
+        
+        # Fill the Monte Carlo "Cone" of probability
+        plt.fill_between(engine.future_gld_dates, engine.worst_path, engine.best_path, color='#f1c40f', alpha=0.1)
+        
+        plt.title(f'Dynamic Monte Carlo: {engine.gold_ticker} Price Projection to Late 2026', fontsize=14, fontweight='bold')
+        plt.xlabel('Date', fontsize=12)
+        plt.ylabel(f'{engine.gold_ticker} Price (USD)', fontsize=12)
+        plt.legend(loc='upper left')
+        plt.grid(True, linestyle='--', alpha=0.5)
+        
+        # 'Today' Marker
+        plt.axvline(x=last_date, color='black', linestyle=':', alpha=0.5)
+        plt.text(last_date + pd.Timedelta(days=5), engine.gld_last_price, 'Today 👉', color='black', fontweight='bold')
+        
+        plt.tight_layout()
+        plt.show()
+    else:
+        print("\n⚠️ Gold projection plot skipped (Target ticker not found in portfolio).")
